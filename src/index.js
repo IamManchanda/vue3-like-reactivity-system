@@ -4,17 +4,20 @@
  * Vue.js version 3 like implementation
  */
 
+let activeEffect = null;
 const targetMap = new WeakMap();
 
 const track = (target, key) => {
-  let depsMap = targetMap.get(target);
-  if (!depsMap) {
-    targetMap.set(target, (depsMap = new Map()));
-  }
-  let dep = depsMap.get(key);
-  if (!dep) {
-    depsMap.set(key, (dep = new Set()));
-    dep.add(effect);
+  if (activeEffect) {
+    let depsMap = targetMap.get(target);
+    if (!depsMap) {
+      targetMap.set(target, (depsMap = new Map()));
+    }
+    let dep = depsMap.get(key);
+    if (!dep) {
+      depsMap.set(key, (dep = new Set()));
+      dep.add(activeEffect);
+    }
   }
 };
 
@@ -48,39 +51,65 @@ const reactive = (target) => {
   return new Proxy(target, handler);
 };
 
-/**
- * Unleash the reactivity, Initialize
- */
+const ref = (raw) => {
+  const r = {
+    get value() {
+      track(r, "value");
+      return raw;
+    },
+    set value(newVal) {
+      raw = newVal;
+      trigger(r, "value");
+    },
+  };
+  return r;
+};
+
+const effect = (eff) => {
+  activeEffect = eff;
+  activeEffect();
+  activeEffect = null;
+};
+
+// Unleash the reactivity
 let state = reactive({
   price: 0,
   quantity: 0,
 });
+let salePrice = ref(0);
 let total = 0;
-let effect = () => {
-  total = state.price * state.quantity;
-};
-effect();
 
-/**
- * Log Before Update
- */
-console.log("Before Update", { ...state, total });
+effect(() => {
+  salePrice.value = state.price * 0.9;
+});
 
-/**
- * Log After update: 1
- */
+effect(() => {
+  total = salePrice.value * state.quantity;
+});
+
+const objectToLog = () => ({
+  price: state.price,
+  quantity: state.quantity,
+  salePrice: salePrice.value,
+  total,
+});
+
+// Log before Update
+console.log("Before Update", objectToLog());
+// => Before Update { price: 0, quantity: 0, salePrice: 0, total: 0 }
+
+// Log after update: 1
 state.price = 5;
 state.quantity = 2;
-console.log("After update 1:", { ...state, total });
+console.log("After update 1:", objectToLog());
+// => After update 1: { price: 5, quantity: 2, salePrice: 4.5, total: 9 }
 
-/**
- * Log After update: 2
- */
+// Log after update: 2
 state.price = 20;
-console.log("After update 2:", { ...state, total });
+console.log("After update 2:", objectToLog());
+// => After update 2: { price: 20, quantity: 2, salePrice: 18, total: 36 }
 
-/**
- * Log After update: 3
- */
+// Log after update: 3
 state.quantity = 5;
-console.log("After update 3:", { ...state, total });
+console.log("After update 3:", objectToLog());
+// => After update 3: { price: 20, quantity: 5, salePrice: 18, total: 90 }
