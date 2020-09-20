@@ -10,6 +10,11 @@
  */
 const targetMap = new WeakMap();
 
+/**
+ * Track Function
+ * @param {*} target
+ * @param {*} key
+ */
 const track = (target, key) => {
   /**
    * We need to make sure this effect is being tracked
@@ -22,28 +27,33 @@ const track = (target, key) => {
      * If there is no map, then create one
      */
     targetMap.set(target, (depsMap = new Map()));
+  }
+
+  /**
+   * Get the current dependencies (effects)
+   * that need to be run when this is set
+   */
+  let dep = depsMap.get(key);
+
+  if (!dep) {
+    /**
+     * If there is no dependencies (effects),
+     * then create a new Set
+     */
+    depsMap.set(key, (dep = new Set()));
 
     /**
-     * Get the current dependencies (effects)
-     * that need to be run when this is set
+     * Add the effect to dependency map
      */
-    let dep = depsMap.get(key);
-
-    if (!dep) {
-      /**
-       * If there is no dependencies (effects),
-       * then Create a new Set
-       */
-      depsMap.set(key, (dep = new Set()));
-
-      /**
-       * Add the effect to dependency map
-       */
-      dep.add(effect);
-    }
+    dep.add(effect);
   }
 };
 
+/**
+ * Trigger Function
+ * @param {*} target
+ * @param {*} key
+ */
 const trigger = (target, key) => {
   /**
    * Does this object have any properties
@@ -75,24 +85,61 @@ const trigger = (target, key) => {
 };
 
 /**
- * Unleash the reactivity
+ * Reactive Function
+ * @param {*} target
  */
+const reactive = (target) => {
+  const handler = {
+    get(target, key, receiver) {
+      let result = Reflect.get(target, key, receiver);
 
-let state = {
+      /**
+       * If this reactive property (target) is GET
+       * inside then track the effect to rerun on SET
+       */
+      track(target, key);
+
+      return result;
+    },
+
+    set(target, key, value, receiver) {
+      let oldValue = target[key];
+      let result = Reflect.set(target, key, value, receiver);
+
+      if (result && oldValue != value) {
+        /**
+         * If this reactive property (target) has
+         * effects to rerun on SET, trigger them.
+         */
+        trigger(target, key);
+      }
+
+      return result;
+    },
+  };
+  return new Proxy(target, handler);
+};
+
+/**
+ * Unleash the reactivity, Initialize
+ */
+let state = reactive({
   price: 5,
   quantity: 2,
-};
+});
 let total = 0;
 let effect = () => {
   total = state.price * state.quantity;
 };
-
-track(state, "quantity");
 effect();
-console.log("Total before update:", total);
-// => Total before update: 10
 
+/**
+ * Log Before Update
+ */
+console.log("Before Update:", total);
+
+/**
+ * Log After update
+ */
 state.quantity = 3;
-trigger(state, "quantity");
-console.log("Total after update:", total);
-// => Total after update: 15
+console.log("After update:", total);
