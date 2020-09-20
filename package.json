@@ -1,0 +1,11 @@
+{
+  "name": "vanilla-reactivity-system",
+  "version": "1.0.0",
+  "description": "",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js"
+  },
+  "author": "",
+  "license": "ISC"
+}
