@@ -124,8 +124,8 @@ const reactive = (target) => {
  * Unleash the reactivity, Initialize
  */
 let state = reactive({
-  price: 5,
-  quantity: 2,
+  price: 0,
+  quantity: 0,
 });
 let total = 0;
 let effect = () => {
@@ -136,10 +136,23 @@ effect();
 /**
  * Log Before Update
  */
-console.log("Before Update:", total);
+console.log("Before Update", { ...state, total });
 
 /**
- * Log After update
+ * Log After update: 1
  */
-state.quantity = 3;
-console.log("After update:", total);
+state.price = 5;
+state.quantity = 2;
+console.log("After update 1:", { ...state, total });
+
+/**
+ * Log After update: 2
+ */
+state.price = 20;
+console.log("After update 2:", { ...state, total });
+
+/**
+ * Log After update: 3
+ */
+state.quantity = 5;
+console.log("After update 3:", { ...state, total });
